@@ -1,0 +1,9 @@
+{
+  "name": "bossa",
+  "version": "0.1.0",
+  "description": "Architect main session that designs, delegates and decides; scout, implementer, hard-implementer, code-reviewer, security-reviewer and git-ops subagents do the work. A hook keeps the architect read-only on code and git.",
+  "author": {
+    "name": "Rajesh Suramalla"
+  },
+  "license": "MIT"
+}

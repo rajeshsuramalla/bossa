@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "bossa",
+  "description": "An architect session that delegates every code change, review and git operation to worker agents.",
+  "owner": {
+    "name": "Rajesh Suramalla"
+  },
+  "plugins": [
+    {
+      "name": "bossa",
+      "description": "Architect plus six worker subagents and a guard hook. The architect's context holds specs and findings, not file dumps.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
