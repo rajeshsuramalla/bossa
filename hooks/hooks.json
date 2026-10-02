@@ -11,6 +11,17 @@
           }
         ]
       }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" worker_style.py",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

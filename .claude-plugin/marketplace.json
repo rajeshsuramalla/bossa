@@ -11,6 +11,24 @@
       "description": "Architect plus six worker subagents and a guard hook. The architect's context holds specs and findings, not file dumps.",
       "source": "./",
       "category": "productivity"
+    },
+    {
+      "name": "caveman",
+      "description": "Terse output for the main session, by Julius Brussee. Companion to bossa; installs separately.",
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      },
+      "category": "productivity"
+    },
+    {
+      "name": "ponytail",
+      "description": "Lazy-senior-developer coding discipline, by Dietrich Gebert. Companion to bossa; installs separately.",
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      },
+      "category": "productivity"
     }
   ]
 }
