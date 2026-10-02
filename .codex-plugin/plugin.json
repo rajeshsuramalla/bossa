@@ -1,0 +1,16 @@
+{
+  "name": "bossa",
+  "version": "0.3.0",
+  "description": "Guard hook for the bossa architect workflow: blocks destructive git. The architect rules and worker agents are copied in from codex/.",
+  "author": {
+    "name": "Rajesh Suramalla"
+  },
+  "license": "MIT",
+  "hooks": "./hooks/codex-hooks.json",
+  "interface": {
+    "displayName": "bossa",
+    "shortDescription": "Blocks destructive git for the bossa architect workflow",
+    "developerName": "Rajesh Suramalla",
+    "category": "Productivity"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "bossa",
+  "version": "0.3.0",
+  "description": "Architect agent that designs, delegates and decides; scout, implementer, hard-implementer, code-reviewer, security-reviewer and git-ops agents do the work. A hook blocks destructive git.",
+  "author": {
+    "name": "Rajesh Suramalla"
+  },
+  "license": "MIT",
+  "agents": "copilot/agents/",
+  "hooks": "hooks/copilot-hooks.json"
+}

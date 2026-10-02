@@ -7,8 +7,12 @@
    worker to opus on an Agent call; workers run on their frontmatter model.
 
 Exit 0 allows, exit 2 blocks with the reason on stderr. Unreadable input fails open.
+
+BOSSA_HOST=copilot or codex: those PreToolUse payloads carry no agent identity, so only
+rule 1 applies, to every Bash call, and a block also prints the host's deny JSON on stdout.
 """
 import json
+import os
 import re
 import sys
 from typing import Dict, List, Optional, Tuple
@@ -18,6 +22,11 @@ EXIT_BLOCK = 2
 EXIT_SELFTEST_FAILED = 1
 
 PLUGIN = "bossa"
+HOST_ENV = "BOSSA_HOST"
+HOST_CLAUDE = "claude"
+HOST_COPILOT = "copilot"
+HOST_CODEX = "codex"
+HOSTS = (HOST_CLAUDE, HOST_COPILOT, HOST_CODEX)
 GIT_OPS = ("git-ops", PLUGIN + ":git-ops")
 ARCHITECT = ("architect", PLUGIN + ":architect")
 BARE_AGENTS = (
@@ -105,7 +114,30 @@ def _unwrap(command: str) -> str:
     return WRAPPERS.sub(r"\1", command)
 
 
-def check(event: Dict) -> Optional[str]:
+def _host() -> str:
+    """Return the host named by BOSSA_HOST; an unset or unknown value means Claude Code."""
+    host = os.environ.get(HOST_ENV, HOST_CLAUDE)
+    return host if host in HOSTS else HOST_CLAUDE
+
+
+def _deny_json(host: str, reason: str) -> str:
+    """Return the stdout JSON that makes the host deny the tool call, or "" for Claude Code."""
+    if host == HOST_COPILOT:
+        return json.dumps({"permissionDecision": "deny", "permissionDecisionReason": reason})
+    if host == HOST_CODEX:
+        return json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": reason,
+                }
+            }
+        )
+    return ""
+
+
+def check(event: Dict, host: str = HOST_CLAUDE) -> Optional[str]:
     """Return the reason to block this tool call, or None to allow it."""
     tool = _text(event, "tool_name")
     tool_input = event.get("tool_input") or {}
@@ -119,11 +151,13 @@ def check(event: Dict) -> Optional[str]:
         git_view = _unwrap(command)
         if DESTRUCTIVE.search(git_view):
             return BLOCK_DESTRUCTIVE
+        if host != HOST_CLAUDE:
+            return None
         if _is_bossa_agent(agent_type) and agent_type not in GIT_OPS:
             if GIT_WRITE.search(git_view):
                 return BLOCK_GIT_WRITE
 
-    if agent_id or agent_type not in ARCHITECT:
+    if host != HOST_CLAUDE or agent_id or agent_type not in ARCHITECT:
         return None
 
     if tool == "Agent":
@@ -137,18 +171,19 @@ def check(event: Dict) -> Optional[str]:
     return None
 
 
-def evaluate(raw: str) -> Tuple[int, str]:
-    """Turn raw hook input into an exit code and a stderr message."""
+def evaluate(raw: str, host: str = HOST_CLAUDE) -> Tuple[int, str, str]:
+    """Turn raw hook input into an exit code, a stderr message and a stdout deny payload."""
     try:
         event = json.loads(raw)
         if not isinstance(event, dict):
             raise ValueError("hook input is not a JSON object")
-        reason = check(event)
+        reason = check(event, host)
     except ValueError as error:
-        return EXIT_ALLOW, "bossa guard: unreadable hook input (%s); allowing" % error
+        return EXIT_ALLOW, "bossa guard: unreadable hook input (%s); allowing" % error, ""
     if reason:
-        return EXIT_BLOCK, "Blocked: " + reason
-    return EXIT_ALLOW, ""
+        message = "Blocked: " + reason
+        return EXIT_BLOCK, message, _deny_json(host, message)
+    return EXIT_ALLOW, "", ""
 
 
 def _call(tool: str, agent_type: str = "", agent_id: str = "", **tool_input: str) -> str:
@@ -237,26 +272,75 @@ def _selftest_cases() -> List[Tuple[str, str, int]]:
     ]
 
 
+def _host_cases() -> List[Tuple[str, str, str, int, str]]:
+    """Return (name, host, input, exit code, stdout) cases for the Copilot and Codex modes."""
+    deny = "Blocked: " + BLOCK_DESTRUCTIVE
+    copilot_json = _deny_json(HOST_COPILOT, deny)
+    codex_json = _deny_json(HOST_CODEX, deny)
+    force_push = _call("Bash", command="git push --force origin main")
+    worker_commit = _call("Bash", "implementer", command="git commit -m x")
+    architect_pipe = _call("Bash", "architect", command="git diff | head")
+    return [
+        ("claude block prints no stdout", HOST_CLAUDE, force_push, EXIT_BLOCK, ""),
+        ("copilot destructive deny json", HOST_COPILOT, force_push, EXIT_BLOCK, copilot_json),
+        ("copilot worker commit allowed", HOST_COPILOT, worker_commit, EXIT_ALLOW, ""),
+        ("copilot architect pipe allowed", HOST_COPILOT, architect_pipe, EXIT_ALLOW, ""),
+        ("codex destructive deny json", HOST_CODEX, force_push, EXIT_BLOCK, codex_json),
+        ("codex worker commit allowed", HOST_CODEX, worker_commit, EXIT_ALLOW, ""),
+        ("codex architect pipe allowed", HOST_CODEX, architect_pipe, EXIT_ALLOW, ""),
+    ]
+
+
+def _host_env_cases() -> List[Tuple[str, Optional[str], str]]:
+    """Return (name, BOSSA_HOST value or None for unset, expected host) cases."""
+    return [
+        ("host unset is claude", None, HOST_CLAUDE),
+        ("host copilot is read", HOST_COPILOT, HOST_COPILOT),
+        ("unknown host is claude", "bogus", HOST_CLAUDE),
+    ]
+
+
 def selftest() -> int:
     """Run the built-in cases and report how many pass."""
-    cases = _selftest_cases()
     failures = []
+    cases = _selftest_cases()
     for name, raw, expected in cases:
-        code, _ = evaluate(raw)
+        code, _, _ = evaluate(raw)
         if code != expected:
             failures.append("FAIL %s: want exit %d, got %d" % (name, expected, code))
+    host_cases = _host_cases()
+    for name, host, raw, expected, expected_stdout in host_cases:
+        code, _, stdout = evaluate(raw, host)
+        if code != expected or stdout != expected_stdout:
+            failures.append(
+                "FAIL %s: want exit %d and %r, got %d and %r"
+                % (name, expected, expected_stdout, code, stdout)
+            )
+    env_cases = _host_env_cases()
+    saved = os.environ.pop(HOST_ENV, None)
+    for name, value, expected_host in env_cases:
+        os.environ.pop(HOST_ENV, None)
+        if value is not None:
+            os.environ[HOST_ENV] = value
+        if _host() != expected_host:
+            failures.append("FAIL %s: want %s, got %s" % (name, expected_host, _host()))
+    os.environ.pop(HOST_ENV, None)
+    if saved is not None:
+        os.environ[HOST_ENV] = saved
     if failures:
         print("\n".join(failures), file=sys.stderr)
         return EXIT_SELFTEST_FAILED
-    print("bossa guard selftest: %d cases passed" % len(cases))
+    print("bossa guard selftest: %d cases passed" % (len(cases) + len(host_cases) + len(env_cases)))
     return EXIT_ALLOW
 
 
 def main(argv: List[str]) -> int:
-    """Read one PreToolUse event from stdin and exit with the verdict."""
+    """Read one PreToolUse event from stdin; print the verdict and exit with its code."""
     if "--selftest" in argv[1:]:
         return selftest()
-    code, message = evaluate(sys.stdin.buffer.read().decode("utf-8", "replace"))
+    code, message, stdout = evaluate(sys.stdin.buffer.read().decode("utf-8", "replace"), _host())
+    if stdout:
+        print(stdout)
     if message:
         print(message, file=sys.stderr)
     return code

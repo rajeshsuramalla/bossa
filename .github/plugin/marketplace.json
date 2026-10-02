@@ -1,0 +1,17 @@
+{
+  "name": "bossa",
+  "owner": {
+    "name": "Rajesh Suramalla"
+  },
+  "metadata": {
+    "description": "An architect agent that delegates every code change, review and git operation to worker agents."
+  },
+  "plugins": [
+    {
+      "name": "bossa",
+      "description": "Architect plus six worker agents and a guard hook. The architect's context holds specs and findings, not file dumps.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

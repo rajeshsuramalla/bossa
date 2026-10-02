@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "BOSSA_HOST=codex \"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" architect_guard.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

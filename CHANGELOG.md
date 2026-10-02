@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0 - 2026-10-01
+
+- Copilot CLI plugin: `copilot plugin install bossa@bossa` brings the architect and the six workers as `.agent.md` files, generated from the Claude agents so the prompt text has one source, plus the destructive-git guard. The Copilot architect has read and search tools only.
+- Codex CLI copy-in: `codex/AGENTS.md` carries the architect rules and `codex/agents/*.toml` the six workers, because Codex plugins cannot ship agents. A Codex plugin manifest ships the guard hook, which you trust once with `/hooks`.
+- Guard host mode: `BOSSA_HOST=copilot` or `codex` applies only the destructive-git rule and prints the host's deny JSON, since those hosts name no agent. `hooks/check_hosts.py --selftest` validates every host file and keeps it in step with `agents/*.md`.
+
 ## 0.2.0 - 2026-10-01
 
 - Companion plugins: caveman and ponytail are offered from the bossa marketplace, installed with `/plugin install caveman@bossa` and `/plugin install ponytail@bossa`.

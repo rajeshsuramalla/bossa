@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "matcher": "Bash",
+        "bash": "r=\"${PLUGIN_ROOT}\"; [ -f \"$r/hooks/py.sh\" ] || { echo 'bossa guard: plugin root not found; guard skipped' >&2; exit 0; }; BOSSA_HOST=copilot \"$r/hooks/py.sh\" architect_guard.py",
+        "powershell": "if (-not (Test-Path \"${PLUGIN_ROOT}\\hooks\\architect_guard.py\")) { [Console]::Error.WriteLine('bossa guard: plugin root not found; guard skipped'); exit 0 }; $env:BOSSA_HOST='copilot'; py -3 \"${PLUGIN_ROOT}\\hooks\\architect_guard.py\"; exit $LASTEXITCODE",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

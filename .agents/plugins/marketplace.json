@@ -1,0 +1,20 @@
+{
+  "name": "bossa",
+  "interface": {
+    "displayName": "bossa"
+  },
+  "plugins": [
+    {
+      "name": "bossa",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
